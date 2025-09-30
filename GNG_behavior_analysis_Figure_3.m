@@ -20,12 +20,13 @@ cd(path)
 tfreq = readtable(fullfile(path, file));
 
 %% Parameters
+clearvars -except tfreq GNGtable_cell GNG_rec_all_cell
 tone_dur = 0.1 ; % sec
 response_window = 2 ; % sec
 dprime_threshold = 1 ;
 min_binsize = 30;
 startRange = 0; %beginning of baseline
-stopRange = 0.1; %end of the offset
+stopRange = 0.1; %end of the offset 
 startReinf = 0.6 ; % start reinforcement
 length_base = 200 ; %ms
 reinforcement = 500 + length_base ; %ms
@@ -44,6 +45,9 @@ catch_freqs =sort(tfreq.Frequency(tfreq.StimulusID(stim)))';
 
 binBorders = startRange_resp:binSize:stopRange_resp ; %define the time points
 numBins = length(binBorders)-1 ;
+
+binBorders_ITI = stopRange_resp+2:binSize:stopRange_resp + 4 ; %define the time points
+numBins_ITI = length(binBorders_ITI)-1 ;
 
 
 % Figure Parameters
@@ -257,7 +261,7 @@ close all
 delta_swtich(delta_swtich == 0) = nan ;
 
 figure
-violinplot([ delta_swtich(1,:)',....
+violinplot([ delta_swtich(1,:),....
     delta_swtich(2,:)'],...
     {'adolescent','adult'},"ViolinColor",{[color_eh{1};color_eh{1}]}) ;
 xticks ([1 2])
@@ -279,6 +283,8 @@ movegui('east');
 
 %statistics
 [p,h,stats] = ranksum(delta_swtich(1,:), delta_swtich(2,:)) ;
+[p,h,stats] = signrank(delta_swtich(1,:)) ;
+[p,h,stats] = signrank(delta_swtich(2,:)) ;
 
 
 line_left = [1.05 ] ;
@@ -381,9 +387,9 @@ for g = 1:numel(GNG_rec_all_cell)
         stim = [1 4 2 3];
 
         index_stim = find (stim_ids == stim(1) | stim_ids == stim(2));
-        [~,~,dprimes_easy_rec(g,i),~,~,~] = GNG_lick_rt_dprime(index_stim, lick_times, stim_times,stim_types, trial_responses, stim_ids, tone_dur , response_window,stim) ;
+        [go_licks_all_easy(g,i),ngo_licks_all_easy(g,i),dprimes_easy_rec(g,i),~,~,~,c_bias_easy(g,i)] = GNG_lick_rt_dprime(index_stim, lick_times, stim_times,stim_types, trial_responses, stim_ids, tone_dur , response_window,stim) ;
         index_stim = find (stim_ids == stim(3) | stim_ids == stim(4));
-        [~,~,dprimes_hard_rec(g,i),~,~,~] = GNG_lick_rt_dprime (index_stim, lick_times, stim_times,stim_types, trial_responses, stim_ids, tone_dur , response_window,stim) ;
+        [go_licks_all_hard(g,i),ngo_licks_all_hard(g,i),dprimes_hard_rec(g,i),~,~,~,c_bias_hard(g,i)] = GNG_lick_rt_dprime (index_stim, lick_times, stim_times,stim_types, trial_responses, stim_ids, tone_dur , response_window,stim) ;
 
         % % extract mouse and rec ID
         mice(g,i) = GNG_rec_all_cell{1,g}(i).Mouse ;
@@ -444,7 +450,7 @@ dprime_mouse(dprime_mouse == 0) = nan ;
 toc
 clc
 close all
-%% dprime recording per difficulty per group (expert and naive)
+  %% dprime recording per difficulty per group (expert and naive)
 dprimes_easy_rec(dprimes_easy_rec == 0) = nan ;
 dprimes_hard_rec(dprimes_hard_rec == 0) = nan ;
 close all
@@ -888,83 +894,109 @@ for g = 1:numel(GNG_rec_all_cell)
             for r = 1:length(stim_times)
                 [n,binCenters] = histdiff(lick_times, stim_times(r), binBorders);
                 binArray(r,:) = n;
+
+
+                [n,binCenters] = histdiff(lick_times, stim_times(r), binBorders_ITI);
+                binArray_ITI(r,:) = n;
+
             end
             binArray_lick_all{g,i} = binArray ;
+
+            binArray_lick_ITI_all{g,i} = binArray_ITI ;
 
             % Lick Latency, lick iti and lick accumulation / expectancy
             lick_latency_trial = nan(size(binArray_lick_all{g,i},1),1) ;
             lick_expec = nan(size(binArray_lick_all{g,i},1),1) ;
 
-            for t = 1:size(binArray_lick_all{g,i},1)
-                lick_times_trial = find (binArray_lick_all{g,i}(t,:) ~= 0) ;
 
+            lick_ITI = nan(size(binArray_lick_ITI_all{g,i},1),1) ;
+            lick_latency_ITI = nan(size(binArray_lick_ITI_all{g,i},1),1) ;
+
+            for t = 1:size(binArray_lick_all{g,i},1)
+                lick_times_trial_ITI = find (binArray_lick_all{g,i}(t,:) ~= 0) ;
+
+                if ~isempty(lick_times_trial_ITI) ;
+                    lick_ITI(t,:) = length(lick_times_trial_ITI) ;
+                    lick_latency_ITI(t,:) = lick_times_trial_ITI(1) ;
+                end
+            end
+        
+
+
+
+
+        for t = 1:size(binArray_lick_all{g,i},1)
+            lick_times_trial = find (binArray_lick_all{g,i}(t,:) ~= 0) ;
+
+            lick_latency_trial(t,:) = NaN ;
+            lick_expec(t,:) = NaN ;
+
+
+            if  isempty(lick_times_trial) ;
                 lick_latency_trial(t,:) = NaN ;
                 lick_expec(t,:) = NaN ;
 
+            elseif ~isempty(lick_times_trial) ;
+                lick_times_trial = lick_times_trial (lick_times_trial > length_base) ;
 
-                if  isempty(lick_times_trial) ;
-                    lick_latency_trial(t,:) = NaN ;
-                    lick_expec(t,:) = NaN ;
-
-                elseif ~isempty(lick_times_trial) ;
-                    lick_times_trial = lick_times_trial (lick_times_trial > length_base) ;
-
-                    if ~isempty(lick_times_trial) ;
-                        lick_latency_1 = lick_times_trial(1) ;
-                        lick_latency_trial(t,:) = (lick_latency_1) - length_base  ;
+                if ~isempty(lick_times_trial) ;
+                    lick_latency_1 = lick_times_trial(1) ;
+                    lick_latency_trial(t,:) = (lick_latency_1) - length_base  ;
 
 
-                        if  lick_latency_1 < reinforcement
-                            lick_expec(t,:) = length(find (binArray_lick_all{g,i}(t,lick_latency_1:(lick_latency_1 + dist(lick_latency_1,reinforcement))) ~= 0)) ;
-                        elseif lick_latency_1 >= reinforcement
-                            lick_expec(t,:) = NaN ;
-                        end
-
-                    elseif isempty(lick_times_trial) ;
-                        lick_latency_trial(t,:) = NaN ;
+                    if  lick_latency_1 < reinforcement
+                        lick_expec(t,:) = length(find (binArray_lick_all{g,i}(t,lick_latency_1:(lick_latency_1 + dist(lick_latency_1,reinforcement))) ~= 0)) ;
+                    elseif lick_latency_1 >= reinforcement
                         lick_expec(t,:) = NaN ;
                     end
+
+                elseif isempty(lick_times_trial) ;
+                    lick_latency_trial(t,:) = NaN ;
+                    lick_expec(t,:) = NaN ;
                 end
             end
-
-            lick_latency_diff{g,i} = lick_latency_trial ;
-            lick_expec_diff{g,i} = lick_expec ;
-            rec_length(g,i) = length(stim_times) ;
-            stim_ids_all{g,i} = stim_ids ;
         end
+
+        lick_latency_diff{g,i} = lick_latency_trial ;
+        lick_expec_diff{g,i} = lick_expec ;
+        lick_ITI_diff{g,i} = lick_ITI ;
+        lick_latency_ITI_diff{g,i} = lick_latency_ITI ;
+        rec_length(g,i) = length(stim_times) ;
+        stim_ids_all{g,i} = stim_ids ;
     end
+end
 
-    lick_latency_all = nan(2, length(Recs), min_trials);
-    lick_expec_all =  nan(2, length(Recs), min_trials);
+lick_latency_all = nan(2, length(Recs), min_trials);
+lick_expec_all =  nan(2, length(Recs), min_trials);
 
-    for i   = 1:numel(GNG_rec_all_cell{1,g})
-        lick_latency_diff{g,i}(lick_latency_diff{g,i} == 0) = nan;
-        lick_expec_diff{g,i}(lick_expec_diff{g,i} == 0) = nan;
+for i   = 1:numel(GNG_rec_all_cell{1,g})
+    lick_latency_diff{g,i}(lick_latency_diff{g,i} == 0) = nan;
+    lick_expec_diff{g,i}(lick_expec_diff{g,i} == 0) = nan;
 
-        lick_latency_all(g,i,1:length(lick_latency_diff{g,i})) = lick_latency_diff{g,i};
-        lick_expec_all(g,i,1:length(lick_expec_diff{g,i})) = lick_expec_diff{g,i};
+    lick_latency_all(g,i,1:length(lick_latency_diff{g,i})) = lick_latency_diff{g,i};
+    lick_expec_all(g,i,1:length(lick_expec_diff{g,i})) = lick_expec_diff{g,i};
 
-        lick_latency_m(g,i) = nanmean(squeeze(lick_latency_all(g,i,:))) ;
-        lick_expec_m(g,i) = nanmean(squeeze(lick_expec_all(g,i,:))) ;
-    end
+    lick_latency_m(g,i) = nanmean(squeeze(lick_latency_all(g,i,:))) ;
+    lick_expec_m(g,i) = nanmean(squeeze(lick_expec_all(g,i,:))) ;
+end
 
-    for t = 1:min_trials
-        lick_latency_group (g,t) = nanmean(lick_latency_all(g,:,t)) ;
-        lick_expec_group (g,t) = nanmean(lick_expec_all(g,:,t)) ;
-    end
+for t = 1:min_trials
+    lick_latency_group (g,t) = nanmean(lick_latency_all(g,:,t)) ;
+    lick_expec_group (g,t) = nanmean(lick_expec_all(g,:,t)) ;
+end
 
-    lick_latency_group(g,lick_latency_group(g,:) == 0) = nan;
-    lick_expec_group(g,lick_expec_group(g,:) == 0) = nan;
+lick_latency_group(g,lick_latency_group(g,:) == 0) = nan;
+lick_expec_group(g,lick_expec_group(g,:) == 0) = nan;
 
-    idx_nan = [] ;
-    idx_nan = find(~isnan(lick_latency_group(g,:))) ;
+idx_nan = [] ;
+idx_nan = find(~isnan(lick_latency_group(g,:))) ;
 
-    idx_nan = find(~isnan(lick_latency_group(g,:))) ;
-    lick_latency_cell{g,1}  =  lick_latency_group(g,idx_nan) ;
-    lick_latency_cut{g,1}(:,1:min_trials) = lick_latency_cell{g,1}(:,1:min_trials) ;
+idx_nan = find(~isnan(lick_latency_group(g,:))) ;
+lick_latency_cell{g,1}  =  lick_latency_group(g,idx_nan) ;
+lick_latency_cut{g,1}(:,1:min_trials) = lick_latency_cell{g,1}(:,1:min_trials) ;
 
-    lick_expec_cell{g,1}  =  lick_expec_group(g,idx_nan) ;
-    lick_expec_cut{g,1}(:,1:min_trials) = lick_expec_cell{g,1}(:,1:min_trials) ;
+lick_expec_cell{g,1}  =  lick_expec_group(g,idx_nan) ;
+lick_expec_cut{g,1}(:,1:min_trials) = lick_expec_cell{g,1}(:,1:min_trials) ;
 
 end
 toc
@@ -1072,6 +1104,7 @@ for g = 1:numel(GNG_rec_all_cell)-2
         'facealpha' , 0.2, 'EdgeColor','none')
     hold on
 
+
     xticks([100 350 600 2100])
     xticklabels([0 250 500 2000])
     xlim([0 700])
@@ -1091,6 +1124,7 @@ for g = 1:numel(GNG_rec_all_cell)-2
     box off;
     hold on;
 end
+
 filename = 'Fig3j'
 filepath = fullfile(directory, filename);
 recent_figure = gcf;
@@ -1246,3 +1280,180 @@ ax.XAxis.FontSize = 20;
 ax.YAxis.FontSize = 20;
 movegui('east');
 box off;
+
+%% review
+%% plot hit and fa rates 
+
+L = {['-'],['--'],['-'],['--']}
+go_licks_all_easy(go_licks_all_easy == 0) = nan ; 
+go_licks_all_hard(go_licks_all_hard == 0) = nan ; 
+ngo_licks_all_hard(ngo_licks_all_hard == 0) = nan ; 
+ngo_licks_all_easy(ngo_licks_all_easy == 0) = nan ; 
+clc
+close all
+figure
+for g = 1:2%size(GNG_rec_all_cell,2)
+    % figure
+    % for i   = 1:size(GNG_rec_all_cell{1,g},1) % mouse
+    % 
+    %         plot(freqs, [go_licks_all_easy(g,i) go_licks_all_hard(g,i) ngo_licks_all_hard(g,i) ngo_licks_all_easy(g,i)]...
+    %             ,'Color',[.5 .5 .5 .3],'linestyle',L{g},'linewidth',3)
+    %         hold on 
+    % end
+
+    mean_licks = nanmean([go_licks_all_easy(g,:)' go_licks_all_hard(g,:)' ngo_licks_all_hard(g,:)' ngo_licks_all_easy(g,:)']) ;
+    ste_licks = nanstd([go_licks_all_easy(g,:)' go_licks_all_hard(g,:)' ngo_licks_all_hard(g,:)' ngo_licks_all_easy(g,:)'],1,1)
+
+    errorbar(freqs, mean_licks ,ste_licks,'Color',[.5 .5 .5],'linestyle',L{g},'linewidth',3)
+    hold on
+
+    ylim([0 1]);
+yticks([0:0.2:1])
+yline(0.5,'--','Color','k','linewidth',2);
+xline(10,'--','Color','k','linewidth',2);
+xlim([7 14.1])
+xticks([7 9.2 10.9 14.1])
+xlabel('freq (kHz)');
+ylabel('lick rate');
+set(gca, 'XDir','reverse','XScale','log');
+box off;
+hold on    
+ax = gca;
+ax.XAxis.FontSize = 20 ;
+ax.YAxis.FontSize = 20 ;
+ax.Title.FontSize = 20 ;
+ax.Title.FontSize = 20 ;
+
+end
+%% cbias
+close all
+figure
+violinplot([ (mean([c_bias_easy(1,:); c_bias_hard(1,:)])')-1,....
+    (mean([c_bias_easy(2,:); c_bias_hard(2,:)])')-1],...
+    {'adolescent','adult'},"ViolinColor",{[.5 .5 .5; .5 .5 .5]}) ;
+xticks ([1 2])
+xlim([0 3]);
+ylim([-3 1]);
+yticks([-3 -2 -1 0 1])
+yline(0,'--','linewidth',1)
+
+[p,h,stats] = ranksum( mean([c_bias_easy(1,:); c_bias_hard(1,:)])',  mean([c_bias_easy(2,:); c_bias_hard(2,:)])') ;
+
+xticklabels({'adolescent','adult'})
+ylabel("c-bias")
+box off;
+makepretty;
+hold on
+ax = gca;
+ax.XAxis.FontSize = 20;
+ax.YAxis.FontSize = 20;
+movegui('east');
+
+
+
+
+%% impulsivity after FA only
+
+clear lick_ITI_diff r n binArray_ITI binArray proportion_lick_iti n_lick_iti
+
+binBorders = startRange_resp:binSize:stopRange_resp ; %define the time points
+numBins = length(binBorders)-1 ;
+
+binBorders_ITI = stopRange_resp+4:binSize:stopRange_resp+6 ; %define the time points
+numBins_ITI = length(binBorders_ITI)-1 ;
+
+% dprime, lick psth and lick parameters
+tic
+for g = 1:numel(GNG_rec_all_cell)
+    Recs = 1:numel(GNG_rec_all_cell{1,g});
+    for i = 1:length(Recs)
+        if ~isempty(GNG_rec_all_cell{1,g})
+
+            % extract trial stamps
+            stim_types = GNG_rec_all_cell{1, g}(i).Behavior.stim_types%(:,1:min_trials) ;
+            stim_ids  = GNG_rec_all_cell{1, g}(i).Behavior.stim_ids %(:,1:min_trials) ;
+            trial_responses = GNG_rec_all_cell{1, g}(i).Behavior.trial_responses%(:,1:min_trials) ;
+            lick_times = GNG_rec_all_cell{1, g}(i).Behavior.lick_times ;
+            stim_times = GNG_rec_all_cell{1, g}(i).Behavior.stim_times%(:,1:min_trials) ;
+
+            idx_FA = find(stim_types == -1 & trial_responses == 1) ;
+            stim_times = stim_times(idx_FA) ;
+
+            % create a binary array of the licks during the reinforcment delay
+            for r = 1:length(stim_times)
+                [n,binCenters] = histdiff(lick_times, stim_times(r), binBorders);
+                binArray(r,:) = n;
+
+
+                [n,binCenters] = histdiff(lick_times, stim_times(r), binBorders_ITI);
+                binArray_ITI(r,:) = n;
+
+            end
+            binArray_lick_all{g,i} = binArray ;
+
+            binArray_lick_ITI_all{g,i} = binArray_ITI ;
+
+            % Lick Latency, lick iti and lick accumulation / expectancy
+            lick_latency_trial = nan(size(binArray_lick_all{g,i},1),1) ;
+            lick_expec = nan(size(binArray_lick_all{g,i},1),1) ;
+
+
+            lick_ITI = nan(size(binArray_lick_ITI_all{g,i},1),1) ;
+            lick_latency_ITI = nan(size(binArray_lick_ITI_all{g,i},1),1) ;
+
+            for t = 1:size(binArray_lick_all{g,i},1)
+                lick_times_trial_ITI = find (binArray_lick_all{g,i}(t,:) ~= 0) ;
+
+                if ~isempty(lick_times_trial_ITI) ;
+                    lick_ITI(t,:) = length(lick_times_trial_ITI) ;
+                    lick_latency_ITI(t,:) = lick_times_trial_ITI(1) ;
+                end
+            end
+
+            lick_ITI_diff{g,i} = lick_ITI ;
+        end
+    end
+end
+toc
+%% Lick latency impulsivity average
+tic
+for g = 1:numel(GNG_rec_all_cell)
+    Recs = 1:numel(GNG_rec_all_cell{1,g});
+    for i = 1:length(Recs)
+        if ~isempty(GNG_rec_all_cell{1,g})
+
+            %lick_ITI_diff{g,i}(isnan(lick_ITI_diff{g,i})) = 0 ;
+
+            n_lick_iti(g,i) = nanmean(lick_ITI_diff{g,i}(lick_ITI_diff{g,i}>0))
+            proportion_lick_iti(g,i) = abs(length(find(lick_ITI_diff{g,i}>5)) / (length(lick_ITI_diff{g,i}))) ;
+
+
+        end
+    end
+end
+
+%% expert impulsivity 
+
+n_lick_iti(n_lick_iti == 0) = nan ; 
+proportion_lick_iti(proportion_lick_iti == 0) = nan ; 
+figure
+violinplot([n_lick_iti(2,:)' n_lick_iti(1,:)'],{'adolescent','adult'},"ViolinColor",{[0.5 0.5 0.5],[0.5 0.5 0.5]})
+hold on
+xlim([0 3])
+ylim([0 10])
+yticks([0 2 4 6 8 10])
+ylabel('n licks')
+box off
+title('Licks during ITI expert')
+[p,h,stats] = ranksum(n_lick_iti(1,:)', n_lick_iti(2,:)') 
+
+figure
+violinplot([proportion_lick_iti(2,:)' proportion_lick_iti(1,:)'],{'adolescent','adult'},"ViolinColor",{[0.5 0.5 0.5],[0.5 0.5 0.5]})
+hold on
+xlim([0 3])
+ylim([0 1])
+yticks([0 0.25 .5 .75 1])
+ylabel('proportion of licks')
+title('Licks during ITI expert')
+box off
+[p,h,stats] = ranksum(proportion_lick_iti(1,:)', proportion_lick_iti(2,:)') 
