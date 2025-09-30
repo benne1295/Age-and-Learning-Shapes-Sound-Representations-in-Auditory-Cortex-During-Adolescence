@@ -31,6 +31,9 @@ L2 = {['--'], ['-'],['--'], ['-']};
 M = {['o'],['o'],['o'],['o']} ;
 
 
+bout_number = 10 ; 
+
+
 group_string = {'adolescent','adult'}
 directory = 'Z:\Shared\Benne\Praegel_et_al_2024\praegel_et_al_final\figures';
 
@@ -108,12 +111,40 @@ for i   = 1:numel(EducageTable_cell)
         index_easy = find (mouse_table.level == 4 & (mouse_table.stimID ==1 | mouse_table.stimID == 4));
         index_hard = find (mouse_table.level == 4 & (mouse_table.stimID ==2  | mouse_table.stimID == 3));
 
-        % 1 oc.t discrimination
+
+   % 1 oc.t discrimination
         [hit_easy{n,i}, fa_easy{n,i}, ~, cr_easy{n,i}, go_licks, ngo_licks] = trial_outcomes (binsize, index_easy, mouse_table);
         [~, ~, dPrime_easy{n,i}, cbias_easy{n,i}] = dprime(binsize, go_licks, ngo_licks, mice);
         % 0.25 oct. discrimination
         [hit_hard{n,i}, fa_hard{n,i}, ~, cr_hard{n,i}, go_licks, ngo_licks] = trial_outcomes (binsize, index_hard, mouse_table);
         [~, ~, dPrime_hard{n,i}, cbias_hard{n,i}] = dprime(binsize, go_licks, ngo_licks, mice);
+
+        idx_after_easy = index_easy +1 ;
+        idx_after_hard = index_hard +1 ;
+       
+        idx_easy_after_hard = index_easy(ismember (index_easy,idx_after_hard)) ;  
+        idx_hard_after_easy = index_hard(ismember (index_hard,idx_after_easy)) ;
+        idx_easy_after_easy = index_easy(ismember (index_easy,idx_after_easy)) ;  
+        idx_hard_after_hard = index_hard(ismember (index_hard,idx_after_hard)) ;  
+
+
+        %intermingled trials
+        % 1 oc.t discrimination
+        [hit_easy_after_hard{n,i}, fa_easy_after_hard{n,i}, ~, cr_easy_after_hard{n,i}, go_licks, ngo_licks] = trial_outcomes (binsize, idx_easy_after_hard, mouse_table);
+        [~, ~, dPrime_easy_after_hard{n,i}, cbias_easy_after_hard{n,i}] = dprime(binsize, go_licks, ngo_licks, mice);
+        % 0.25 oct. discrimination
+        [hit_hard_after_easy{n,i}, fa_hard_after_easy{n,i}, ~, cr_hard_after_easy{n,i}, go_licks, ngo_licks] = trial_outcomes (binsize, idx_hard_after_easy, mouse_table);
+        [~, ~, dPrime_hard_after_easy{n,i}, cbias_hard_after_easy{n,i}] = dprime(binsize, go_licks, ngo_licks, mice);
+
+
+        %bouts of only easy or only hard
+                % 1 oc.t discrimination
+        [hit_easy_bout{n,i}, fa_easy_bout{n,i}, ~, cr_easy_bout{n,i}, go_licks, ngo_licks] = trial_outcomes (binsize, idx_easy_after_easy, mouse_table);
+        [~, ~, dPrime_easy_bout{n,i}, cbias_easy_bout{n,i}] = dprime(binsize, go_licks, ngo_licks, mice);
+        % 0.25 oct. discrimination
+        [hit_hard_bout{n,i}, fa_hard_bout{n,i}, ~, cr_hard_bout{n,i}, go_licks, ngo_licks] = trial_outcomes (binsize, idx_hard_after_hard, mouse_table);
+        [~, ~, dPrime_hard_bout{n,i}, cbias_hard_bout{n,i}] = dprime(binsize, go_licks, ngo_licks, mice);
+
 
         % trial to threshold - procedural learning
         trial_criterion_easy_level = find((dPrime_easy_level{n,i}(2:end-1)>= dprime_threshold))+1;
@@ -131,38 +162,51 @@ for i   = 1:numel(EducageTable_cell)
         Naive_dPrime_easy(n,i) = dPrime_easy_level{n,i}(2) ;
         Naive_dPrime_hard(n,i) = dPrime_hard{n,i}(2) ;
 
+        Naive_dPrime_easy_after_hard(n,i) = dPrime_easy_after_hard{n,i}(2) ;
+        Naive_dPrime_hard_after_easy(n,i) = dPrime_hard_after_easy{n,i}(2) ;
+        Naive_dPrime_easy_bout(n,i) = dPrime_easy_bout{n,i}(2) ;
+        Naive_dPrime_hard_bout(n,i) = dPrime_hard_bout{n,i}(2) ;
+
         % unbiased dprime
         min_easy_length = round(min(easy_length(:,i))) ; 
         Min_dPrime_easy(n,i) = dPrime_easy_level{n,i}(round(round(min_easy_length)/binsize)-1) ;
 
         min_hard_length = round(min(hard_hard_length(:,i))) ; 
         Min_dPrime_hard(n,i) = dPrime_hard{n,i}(round(round(min_hard_length)/binsize)-1);
-     
+
 
         if     length(dprime_easy_all{n,i}) >= round(mean_easy_i(1)/binsize)-1
             Mean_adolescent_dPrime_easy(n,i) = dprime_easy_all{n,i}(round(mean_easy_i(1)/binsize)-1);
         elseif length(dprime_easy_all{n,i}) < round(mean_easy_i(1)/binsize)-1
-               Mean_adolescent_dPrime_easy(n,i) = NaN ; 
+            Mean_adolescent_dPrime_easy(n,i) = NaN ;
         end
         if     length(dprime_easy_all{n,i}) >= round(mean_easy_i(2)/binsize)-1
-            Mean_adult_dPrime_easy(n,i) = dprime_easy_all{n,i}(round(mean_easy_i(2)/binsize)-1) ; 
+            Mean_adult_dPrime_easy(n,i) = dprime_easy_all{n,i}(round(mean_easy_i(2)/binsize)-1) ;
         elseif    length(dprime_easy_all{n,i}) < round(mean_easy_i(2)/binsize)-1
-   Mean_adult_dPrime_easy(n,i) = NaN ; 
+            Mean_adult_dPrime_easy(n,i) = NaN ;
         end
         if length(dPrime_hard{n,i}) >= round(mean_hard_i(1)/binsize)-1
             Mean_adolescent_dPrime_hard(n,i) = dPrime_hard{n,i}(round(mean_hard_i(1)/binsize)-1);
         elseif length(dPrime_hard{n,i}) <  round(mean_hard_i(1)/binsize)-1
-             Mean_adolescent_dPrime_hard(n,i) = NaN ; 
+            Mean_adolescent_dPrime_hard(n,i) = NaN ;
         end
         if length(dPrime_hard{n,i}) >= round(mean_hard_i(2)/binsize)-1
             Mean_adult_dPrime_hard(n,i) = dPrime_hard{n,i}(round(mean_hard_i(2)/binsize)-1) ;
         elseif length(dPrime_hard{n,i}) < round(mean_hard_i(2)/binsize)-1
-             Mean_adult_dPrime_hard(n,i) = NaN ; 
+            Mean_adult_dPrime_hard(n,i) = NaN ;
         end
 
         Expert_dPrime_easy_level(n,i) = dPrime_easy_level{n,i}(end);
         Expert_dPrime_easy(n,i) = dPrime_easy{n,i}(end);
         Expert_dPrime_hard(n,i) =  dPrime_hard{n,i}(end);
+
+
+        Expert_dPrime_easy_after_hard(n,i) = dPrime_easy_after_hard{n,i}(end) ;
+        Expert_dPrime_hard_after_easy(n,i) = dPrime_hard_after_easy{n,i}(end) ;
+        Expert_dPrime_easy_bout(n,i) = dPrime_easy_bout{n,i}(end) ;
+        Expert_dPrime_hard_bout(n,i) = dPrime_hard_bout{n,i}(end) ;
+
+
 
         if Naive_dPrime_easy(n,i) > 0
             Delta_dprime_easy(n,i) = Expert_dPrime_easy(n,i) - Naive_dPrime_easy(n,i) ;
@@ -191,6 +235,31 @@ for i   = 1:numel(EducageTable_cell)
 
         Delta_switch(n,i) = dPrime_easy{n,i}(1) - dPrime_easy_level{n,i}(end) ; 
         Delta_switch_cbias(n,i) = cbias_easy{n,i}(1) - cbias_easy_level{n,i}(end) ; 
+
+
+      if Naive_dPrime_easy_after_hard(n,i) > 0
+            Delta_dprime_easy_after_hard(n,i) = Expert_dPrime_easy_after_hard(n,i) - Naive_dPrime_easy_after_hard(n,i) ;
+        elseif Naive_dPrime_easy_after_hard(n,i) <= 0
+            Delta_dprime_easy_after_hard(n,i) = Expert_dPrime_easy_after_hard(n,i) + Naive_dPrime_easy_after_hard(n,i) ;
+        end
+
+        if Naive_dPrime_hard_after_easy(n,i) > 0
+            Delta_dprime_hard_after_easy(n,i) = Expert_dPrime_hard_after_easy(n,i) - Naive_dPrime_hard_after_easy(n,i) ;
+        elseif Naive_dPrime_hard_after_easy(n,i) <= 0
+            Delta_dprime_hard_after_easy(n,i) = Expert_dPrime_hard_after_easy(n,i) + Naive_dPrime_hard_after_easy(n,i) ;
+        end
+
+              if Naive_dPrime_easy_bout(n,i) > 0
+            Delta_dprime_easy_bout(n,i) = Expert_dPrime_easy_bout(n,i) - Naive_dPrime_easy_bout(n,i) ;
+        elseif Naive_dPrime_easy_bout(n,i) <= 0
+            Delta_dprime_easy_bout(n,i) = Expert_dPrime_easy_bout(n,i) + Naive_dPrime_easy_bout(n,i) ;
+        end
+
+        if Naive_dPrime_hard(n,i) > 0
+            Delta_dprime_hard_bout(n,i) = Expert_dPrime_hard_bout(n,i) - Naive_dPrime_hard_bout(n,i) ;
+        elseif Naive_dPrime_hard(n,i) <= 0
+            Delta_dprime_hard_bout(n,i) = Expert_dPrime_hard_bout(n,i) + Naive_dPrime_hard_bout(n,i) ;
+        end
 
     end
 
@@ -406,8 +475,8 @@ violinplot([Mean_adolescent_dPrime_easy(:,1),....
 xticks ([1 2 ])
 xlim([0 3]);
 
-ylim([-2 6]);
-yticks([-2 -1 0 1 2 3 4 5])
+ylim([-1 5]);
+yticks([-1 1 3 5])
 yline(1,'--','linewidth',1)
 
 xticklabels({group_string{1},group_string{2}})
@@ -452,8 +521,8 @@ violinplot([Mean_adult_dPrime_easy(:,1),....
 xticks ([1 2 ])
 xlim([0 3]);
 
-ylim([-2 6]);
-yticks([-2 -1 0 1 2 3 4 5])
+ylim([-1 5]);
+yticks([-1 1 3 5])
 yline(1,'--','linewidth',1)
 
 xticklabels({group_string{1},group_string{2}})
@@ -894,7 +963,8 @@ saveas(recent_figure, filepath, 'svg');
 
 %% supplementary Figure 1.1 B: d' control naive a expert d'
 clc
-close all
+%close all
+
 
 figure
 plot([1 2],nanmean(data_plot_control{1,1}),'Color',color_mean_marker{1},'linestyle',L{1},'linewidth',5) %adolescent
@@ -915,7 +985,7 @@ xlim([0 5]);
 yticks ([-1:5])
 ylim([-1 5]);
 ylabel("d'")
-yline(1,'linestyle','--','linewidth',2)
+yline(1,'linestyle','--')
 xticklabels({'adolescent naive','adolescent exp.','adult naive','adult exp.',})
 
 box off;
@@ -928,15 +998,13 @@ movegui('east');
 
 
 %statistics
-h = kstest(data_plot_control{1,1})
-if h > 0
     [p_hard(3,1),~,~] = ranksum(data_plot_control{1,1}(:,1),data_plot_control{1,2}(:,1),'alpha',0.05,'tail','both') ;
     [p_hard(4,1),~,~] = ranksum(data_plot_control{1,1}(:,2),data_plot_control{1,2}(:,2),'alpha',0.05,'tail','both') ;
     [~,p_hard(3:4,1),~]= bonferroni_holm(p_hard(3:4,1),0.05) ;
     [p_hard(1,1),~,~] = signrank(data_plot_control{1,1}(:,1),data_plot_control{1,1}(:,2),'alpha',0.05,'tail','both') ;
     [p_hard(2,1),~,~] = signrank(data_plot_control{1,2}(:,1),data_plot_control{1,2}(:,2),'alpha',0.05,'tail','both') ;
 
-end
+
 disp(p_hard)
 
 if  p_hard(1,1) < 0.0005
@@ -1723,6 +1791,7 @@ saveas(recent_figure, filepath, 'svg');
 
 %% CV of dprime during hard stimulus after the level switch  
 
+outliers= isoutlier( reshape([cv_dprime_4_hard(:,1) cv_dprime_4_hard(:,2)],[],1),'mean', 3)
 
 figure
 violinplot([ cv_dprime_4_hard(:,1),cv_dprime_4_hard(:,2)],{'adol.','adult'},"ViolinColor",{color_eh{2}} )
@@ -1765,3 +1834,432 @@ end
 filepath = fullfile(directory, filename);
 recent_figure = gcf;
 saveas(recent_figure, filepath, 'svg');
+
+%% review - Impulsivity 
+
+
+clearvars -except EducageTable_cell
+close all
+clc
+hours=[12 13 14 15 16 17 18 19 20 21 22 23 0 1 2 3 4 5 6 7 8 9 10 11];
+max_ITI = 10 ;
+time_delay = 5 ; %time of time delay punishment 
+%%
+
+for i   = 1:numel(EducageTable_cell)
+        EducageTable = cell2table(EducageTable_cell(i));
+        EducageTable = EducageTable.Var1{1,1};
+        
+        mice = unique(EducageTable.mouse_num);
+        for n=1:length(mice)
+            % extract all time data from Educage
+            mouse_table = EducageTable(EducageTable.level == 4 & EducageTable.mouse_num == n,:);
+            textdata= mouse_table.time ;
+            time_file = char(textdata(:,:));
+            hour = str2num(time_file(:,1:2));
+            minutes = str2num(time_file(:,4:5));
+            sec = str2num(time_file(:,7:8));
+            clock{n,i} = [hour minutes sec];
+           
+            
+            hour_diff_trial{n,i} = diff (hour) ;
+            min_diff_trial{n,i} = diff (minutes) ;
+            sec_diff_trial{n,i} = diff(sec);
+            
+            for L = 1:length(sec_diff_trial{n,i})
+                if hour_diff_trial{n,i}(L) < 0 
+                   hour_diff_trial{n,i}(L) = dist(hour_diff_trial{n,i}(end),-24) ;
+                end
+                
+                if min_diff_trial{n,i}(L) < 0 
+                   min_diff_trial{n,i}(L) = dist(min_diff_trial{n,i}(end),-60) ;
+                end
+                
+                if sec_diff_trial{n,i}(L) < 0 
+                   sec_diff_trial{n,i}(L) = dist(sec_diff_trial{n,i}(end),-60) ;
+                end
+            end 
+            
+            for L = 1:length(sec_diff_trial{n,i})
+                if hour_diff_trial{n,i}(L) > 1
+                    min_diff_trial{n,i}(L) = min_diff_trial{n,i}(L)* (hour_diff_trial{n,i}(L)*60);
+                end
+            end
+            
+            for L = 1:length(sec_diff_trial{n,i})
+                if min_diff_trial{n,i}(L) > 1
+                    sec_diff_trial{n,i}(L) = sec_diff_trial{n,i}(L)* (min_diff_trial{n,i}(L)*60);
+                end
+            end
+            
+            mouse_table = mouse_table(1:end-2,:);
+            
+            hit_iti{n,i} =  sec_diff_trial{n,i}( mouse_table.score==0);
+            miss_iti{n,i}= sec_diff_trial{n,i}( mouse_table.score==2);
+            fa_iti{n,i}= sec_diff_trial{n,i}( mouse_table.score==1);
+            cr_iti{n,i}= sec_diff_trial{n,i}( mouse_table.score==3);
+            
+            hit_iti{n,i} =  hit_iti{n,i}(hit_iti{n,i} < max_ITI) ;
+            miss_iti{n,i}= miss_iti{n,i}(miss_iti{n,i} < max_ITI);
+            fa_iti{n,i}= fa_iti{n,i}(fa_iti{n,i} < max_ITI);
+            cr_iti{n,i}= cr_iti{n,i}(cr_iti{n,i} < max_ITI);
+            
+             mean_hit_iti (n,i) = mean(hit_iti{n,i}) ;
+             mean_miss_iti (n,i) = mean(miss_iti{n,i}) ;
+             mean_fa_iti (n,i) = mean(fa_iti{n,i}) + time_delay ; % time of time delay 
+             mean_cr_iti (n,i) = mean(cr_iti{n,i}) ;
+              
+              
+            %run activity per hour
+            for hh=1:length(hours)
+                if ~isempty (clock{n,i})
+                Activity(n,i,hh)= sum(clock{n,i}(:,1) == hours(hh))./ 20;
+                end
+                                if isempty (clock{n,i})
+                                     Activity(n,i,hh) = nan; 
+                                end 
+
+            end     
+            
+             
+        end  
+        for hh=1:length(hours)
+            
+            mean_activity(i,hh) =  nanmean(squeeze(Activity(:,i,hh))) ;
+            stde_activity(i,hh) =  nanstd(squeeze(Activity(:,i,hh))./sqrt(size(mice,1))) ;
+        end
+end
+
+
+
+%%
+
+L = {['--'], ['-']};
+color_plot = {[0.4660 0.6740 0.1880 0.1],[0.9290 0.6940 0.1250 0.1], [0.8500 0.3250 0.0980 0.1], [0.4940 0.1840 0.5560 0.1]};
+color_mean = {[0.4660 0.6740 0.1880],[0.9290 0.6940 0.1250], [0.8500 0.3250 0.0980], [0.4940 0.1840 0.5560]};
+color_patch = {[0.4660 0.6740 0.1880],[0.9290 0.6940 0.1250], [0.8500 0.3250 0.0980], [0.4940 0.1840 0.5560]};
+%% violinplot trialtype itis
+clear stats
+
+figure
+subplot(2,2,1)
+violinplot(mean_hit_iti,{'adol.','adult'},"ViolinColor",{[0.4660 0.6740 0.1880],[0.4660 0.6740 0.1880]});
+ylim([0 10])
+ylabel('sec')
+box off
+makepretty ;
+ax = gca;
+ax.XAxis.FontSize = 15;
+ax.YAxis.FontSize = 15;
+h = [] ; 
+[h(1,1),p,stats{1,1}] = ranksum(mean_hit_iti(:,1),mean_hit_iti(:,2),'alpha',0.05,'tail','both') ;
+if h(:,1) < 0.0005
+    txt = '***';
+elseif  h(:,1) < 0.005
+    txt = '**';
+elseif  h(:,1) < 0.05
+    txt = '*';
+elseif h(:,1) > 0.05
+    txt = 'n.s.';
+end
+line( linspace(1.05,1.95), linspace(8,8),'color','k')
+hold on
+text(mean([1.5 1.5]), 9 ,txt)
+
+
+subplot(2,2,2)
+violinplot(mean_miss_iti,{'adol.','adult'},"ViolinColor",{[0.8500 0.3250 0.0980],[0.8500 0.3250 0.0980]});
+ylim([0 10])
+ylabel('sec')
+box off
+makepretty ;
+ax = gca;
+ax.XAxis.FontSize = 15;
+ax.YAxis.FontSize = 15;
+[h(1,2),p,stats{1,2}] = ranksum(mean_miss_iti(:,1),mean_miss_iti(:,2),'alpha',0.05,'tail','both') ;
+if h(:,2) < 0.0005
+    txt = '***';
+elseif  h(:,2) < 0.005
+    txt = '**';
+elseif  h(:,2) < 0.05
+    txt = '*';
+elseif h(:,2) > 0.05
+    txt = 'n.s.';
+end
+line( linspace(1.05,1.95), linspace(8,8),'color','k')
+hold on
+text(mean([1.5 1.5]), 9 ,txt)
+
+subplot(2,2,3)
+violinplot(mean_fa_iti,{'adol.','adult'},"ViolinColor",{[0.9290 0.6940 0.1250],[0.9290 0.6940 0.1250]});
+ylim([0 15])
+ylabel('sec')
+box off
+makepretty ;
+ax = gca;
+ax.XAxis.FontSize = 15;
+ax.YAxis.FontSize = 15;
+[h(1,3),p,stats{1,3}] = ranksum(mean_fa_iti(:,1),mean_fa_iti(:,2),'alpha',0.05,'tail','both') ;
+if h(:,3) < 0.0005
+    txt = '***';
+elseif  h(:,3) < 0.005
+    txt = '**';
+elseif  h(:,3) < 0.05
+    txt = '*';
+elseif h(:,3) > 0.05
+    txt = 'n.s.';
+end
+line( linspace(1.05,1.95), linspace(13,13),'color','k')
+hold on
+text(mean([1.5 1.5]), 14 ,txt)
+
+
+subplot(2,2,4)
+violinplot(mean_cr_iti,{'adol.','adult'},"ViolinColor",{[0.4940 0.1840 0.5560],[0.4940 0.1840 0.5560]});
+ylim([0 10])
+ylabel('sec')
+box off
+makepretty ;
+ax = gca;
+ax.XAxis.FontSize = 15;
+ax.YAxis.FontSize = 15;
+movegui('east');
+[h(1,4),p,stats{1,4}] = ranksum(mean_cr_iti(:,1),mean_cr_iti(:,2),'alpha',0.05,'tail','both') ;
+if h(:,4) < 0.0005
+    txt = '***';
+elseif  h(:,4) < 0.005
+    txt = '**';
+elseif  h(:,4) < 0.05
+    txt = '*';
+elseif h(:,4) > 0.05
+    txt = 'n.s.';
+end
+line( linspace(1.05,1.95), linspace(8,8),'color','k')
+hold on
+text(mean([1.5 1.5]), 9 ,txt)
+
+%% easy after hard 
+clear stats
+
+   close all
+clc
+figure
+violinplot([Delta_dprime_easy_after_hard(:,1),....
+  Delta_dprime_easy_after_hard(:,2)],...
+   {group_string{1},group_string{2}},"ViolinColor",{[color_eh{1};color_eh{1}]}) ;
+xticks ([1 2 ])
+xlim([0 3]);
+
+ylim([-3 5]);
+yticks([-3 -2 -1 0 1 2 3 ])
+%  yline(1,'--','linewidth',1)
+
+xticklabels({group_string{1},group_string{2}})
+ylabel("Delta d' easy after hard")
+box off;
+makepretty;
+hold on
+ax = gca;
+ax.XAxis.FontSize = 20;
+ax.YAxis.FontSize = 20;
+movegui('east');
+
+%statistics
+[p,h,stats] = ranksum(Delta_dprime_easy_after_hard(:,1), Delta_dprime_easy_after_hard(:,2)) ;
+
+[p1,h,stats] = signrank(Delta_dprime_easy_after_hard(:,1)) ;
+
+[p2,h,stats] = signrank(Delta_dprime_easy_after_hard(:,2)) ;
+
+line_left = [1.05] ;
+line_right =  [1.95 ] ;
+line_height = [3.3] ;
+text_mean = [1.5 ] ;
+text_height = [3.5]  ;
+
+s1 = [1] ;
+   for s = 1:length(s1)
+          txt = num2str(p(s1(s))) ; 
+                    txt1 = num2str(p1(s1(s))) ; 
+          txt2 = num2str(p2(s1(s))) ; 
+
+
+line( linspace(line_left(s),line_right(s)), linspace(line_height(s),line_height(s)),'color','k')
+hold on
+text(mean([text_mean(s) text_mean(s)]), text_height(s) ,txt,'FontSize',10)
+
+text(mean([line_left(s) line_left(s)]), text_height(s) ,txt1,'FontSize',5)
+
+text(mean([line_right(s) line_right(s)]), text_height(s) ,txt2,'FontSize',5)
+
+   end
+
+   %% hard after easy 
+   close all
+clc
+figure
+violinplot([Delta_dprime_hard_after_easy(:,1),....
+  Delta_dprime_hard_after_easy(:,2)],...
+   {group_string{1},group_string{2}},"ViolinColor",{[color_eh{2};color_eh{2}]}) ;
+xticks ([1 2 ])
+xlim([0 3]);
+
+ylim([-3 5]);
+yticks([-3 -2 -1 0 1 2 3 ])
+%  yline(1,'--','linewidth',1)
+
+xticklabels({group_string{1},group_string{2}})
+ylabel(" Delta d' hard after easy")
+box off;
+makepretty;
+hold on
+ax = gca;
+ax.XAxis.FontSize = 20;
+ax.YAxis.FontSize = 20;
+movegui('east');
+
+%statistics
+[p,h,stats] = ranksum(Delta_dprime_hard_after_easy(:,1), Delta_dprime_hard_after_easy(:,2)) ;
+
+[p1,h,stats] = signrank(Delta_dprime_hard_after_easy(:,1)) ;
+
+[p2,h,stats] = signrank(Delta_dprime_hard_after_easy(:,2)) ;
+
+line_left = [1.05] ;
+line_right =  [1.95 ] ;
+line_height = [3.3] ;
+text_mean = [1.5 ] ;
+text_height = [3.5]  ;
+
+s1 = [1] ;
+   for s = 1:length(s1)
+          txt = num2str(p(s1(s))) ; 
+                    txt1 = num2str(p1(s1(s))) ; 
+          txt2 = num2str(p2(s1(s))) ; 
+
+
+line( linspace(line_left(s),line_right(s)), linspace(line_height(s),line_height(s)),'color','k')
+hold on
+text(mean([text_mean(s) text_mean(s)]), text_height(s) ,txt,'FontSize',10)
+
+text(mean([line_left(s) line_left(s)]), text_height(s) ,txt1,'FontSize',5)
+
+text(mean([line_right(s) line_right(s)]), text_height(s) ,txt2,'FontSize',5)
+
+   end
+   %% easy bout 
+
+   close all
+clc
+figure
+violinplot([Delta_dprime_easy_bout(:,1),....
+  Delta_dprime_easy_bout(:,2)],...
+   {group_string{1},group_string{2}},"ViolinColor",{[color_eh{1};color_eh{1}]}) ;
+xticks ([1 2 ])
+xlim([0 3]);
+
+ylim([-3 5]);
+yticks([-3 -2 -1 0 1 2 3 ])
+%  yline(1,'--','linewidth',1)
+
+xticklabels({group_string{1},group_string{2}})
+ylabel(" Delta d' easy bout")
+box off;
+makepretty;
+hold on
+ax = gca;
+ax.XAxis.FontSize = 20;
+ax.YAxis.FontSize = 20;
+movegui('east');
+
+%statistics
+[p,h,stats] = ranksum(Delta_dprime_easy_bout(:,1), Delta_dprime_easy_bout(:,2)) ;
+
+[p1,h,stats] = signrank(Delta_dprime_easy_bout(:,1)) ;
+
+[p2,h,stats] = signrank(Delta_dprime_easy_bout(:,2)) ;
+
+line_left = [1.05] ;
+line_right =  [1.95 ] ;
+line_height = [3.3] ;
+text_mean = [1.5 ] ;
+text_height = [3.5]  ;
+
+s1 = [1] ;
+   for s = 1:length(s1)
+          txt = num2str(p(s1(s))) ; 
+                    txt1 = num2str(p1(s1(s))) ; 
+          txt2 = num2str(p2(s1(s))) ; 
+
+
+line( linspace(line_left(s),line_right(s)), linspace(line_height(s),line_height(s)),'color','k')
+hold on
+text(mean([text_mean(s) text_mean(s)]), text_height(s) ,txt,'FontSize',10)
+
+text(mean([line_left(s) line_left(s)]), text_height(s) ,txt1,'FontSize',5)
+
+text(mean([line_right(s) line_right(s)]), text_height(s) ,txt2,'FontSize',5)
+
+   end
+
+
+
+
+
+
+   %% hard bout 
+   close all
+clc
+figure
+violinplot([Delta_dprime_hard_bout(:,1),....
+  Delta_dprime_hard_bout(:,2)],...
+   {group_string{1},group_string{2}},"ViolinColor",{[color_eh{2};color_eh{2}]}) ;
+xticks ([1 2 ])
+xlim([0 3]);
+
+ylim([-3 5]);
+yticks([-3 -2 -1 0 1 2 3 ])
+%  yline(1,'--','linewidth',1)
+
+xticklabels({group_string{1},group_string{2}})
+ylabel(" Delta d' easy bout")
+box off;
+makepretty;
+hold on
+ax = gca;
+ax.XAxis.FontSize = 20;
+ax.YAxis.FontSize = 20;
+movegui('east');
+
+%statistics
+[p,h,stats] = ranksum(Delta_dprime_hard_bout(:,1), Delta_dprime_hard_bout(:,2)) ;
+
+[p1,h,stats] = signrank(Delta_dprime_hard_bout(:,1)) ;
+
+[p2,h,stats] = signrank(Delta_dprime_hard_bout(:,2)) ;
+
+line_left = [1.05] ;
+line_right =  [1.95 ] ;
+line_height = [3.3] ;
+text_mean = [1.5 ] ;
+text_height = [3.5]  ;
+
+s1 = [1] ;
+   for s = 1:length(s1)
+          txt = num2str(p(s1(s))) ; 
+                    txt1 = num2str(p1(s1(s))) ; 
+          txt2 = num2str(p2(s1(s))) ; 
+
+
+line( linspace(line_left(s),line_right(s)), linspace(line_height(s),line_height(s)),'color','k')
+hold on
+text(mean([text_mean(s) text_mean(s)]), text_height(s) ,txt,'FontSize',10)
+
+text(mean([line_left(s) line_left(s)]), text_height(s) ,txt1,'FontSize',5)
+
+text(mean([line_right(s) line_right(s)]), text_height(s) ,txt2,'FontSize',5)
+
+   end
+
+
+
