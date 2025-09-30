@@ -57,7 +57,8 @@ stopLick = 0.2 ;
 
 % colors
 Colors_area = {[.1 .3 .8], [.5 .4 .9], [0 .5 .6],[0.4940 0.1840 0.5560]};
-colors_ado_adu = {[.5 .7 .2],[ .2 .4 .2],[.5 .7 .2],[ .2 .4 .2]} ; 
+colors_ado_adu = {[.5 .5 .5],[0 0 0],[.5 .5 .5],[0 0 0]} ; 
+
 L = {'-', '-','-','-'};
 L2 = {'--', '-','--','-'};
 
@@ -225,83 +226,8 @@ end
 toc
 
 %% Table Supplemental 1-1 Number of modulated neruons per area
-clc
-% sum per group per area and per recording 
-
-for g   = 1:numel(GNG_rec_all_cell) % run per group
-    
-   % get rec number
-       Recs = 1:numel(GNG_rec_all_cell{1,g}) ;
-    
-    for i = 1:length(Recs) % run per recording
-        
-        % sum per area for ALL neurons 
-        for area = 1:length(areas)
-            idx_all_area = ~isnan(GNG_analysis.clusterIDs_all{1,g}(:,i,area))  ;
-            sum_all_area(1,g,i,area) = size(idx_all_area(idx_all_area == 1),1) ;
-        end
-        % exclude nans
-        idx_all = ~isnan(GNG_analysis.clusterIDs_all{1,g}(:,i,:)) ;
-        sum_all(g,i) = size(idx_all(idx_all == 1),1) ;
-        
-        % sum per area for MODULATED neurons 
-        for area = 1:length(areas)
-            idx = find(GNG_analysis.clusterIDs_mod{1,g}(:,i,area)== 0) ;
-            GNG_analysis.clusterIDs_mod{1,g}(idx,i,area) = nan ;
-            idx_mod_area = ~isnan(GNG_analysis.clusterIDs_mod{1,g}(:,i,area))  ;
-            sum_mod_area(1,g,i,area) = size(idx_mod_area(idx_mod_area == 1),1) ;
-            idx = [] ;
-        end       
-        % exclude nans
-        idx_mod = ~isnan(GNG_analysis.clusterIDs_mod{1,g}(:,i,:))  ;
-        sum_mod(1,g,i) = size(idx_mod(idx_mod == 1),1) ;
-    end
-end
-
-% sum per area per group    
-for g   = 1:numel(GNG_rec_all_cell) % run per group
-        format short 
-        sum_mod_recs(g,:) = sum(squeeze(sum_mod(1,g,:))) ; % all modulated neurons in ACx
-        sum_all_g(g,:) = sum(sum_all(g,:)) ; % all neurons in ACx
-        frac_mod_all(g,:) =   round(sum_mod_recs(g,:)/ sum_all_g(g,:),2) ; % fraction of modulated units      
-
-        sum_area(g,:,:) = squeeze(sum_all_area(1,g,:,:)) ; % per area all neurons
-        sum_mod_area_all(g,:,:) =  squeeze(sum_mod_area(1,g,:,:)) ; % per area only modulated neurons
-        
-        for area = 1:length(areas)
-            sum_area_recs(area,g) = sum(squeeze(sum_area(g,:,area))) ; % all units per area
-            sum_mod_area_recs(area,g) = sum(squeeze(sum_mod_area_all(g,:,area))) ; % all modulated units per area
-            frac_mod_area(area,g) =   round(sum_mod_area_recs(area,g)/ sum_area_recs(area,g),2) ; % fraction of modulated units per area       
-        end
-end
-
-% create table for expert and naive recordings 
-for g = 1:2:numel(GNG_rec_all_cell)-1
-   % cd (path)
-GNG_SU_area_table = table(table_cat_areas,sum_area_recs(:,g), sum_mod_area_recs(:,g), frac_mod_area(:,g),...
-    sum_area_recs(:,g+1), sum_mod_area_recs(:,g+1), frac_mod_area(:,g+1),'VariableNames',...
-    {'areas','neurons adol.','exc. neurons adol.','% adol.',...
-        'neurons adults','exc. neurons adults','% adults'}) ;
-writetable(GNG_SU_area_table,'GNG_ecx_area_table.xlsx','Sheet',g) ;
-end 
 
 
-% compare if the number of neurons is statistically different 
-g1 = [1 1 2 3] ;
-g2 = [2 3 4 4] ;
-for g = 1:numel(GNG_rec_all_cell)
-    for area = 1:length(areas)
-        N1 = sum(sum_area_recs(area,g1(g))) ;
-        n1 = sum(sum_mod_area_recs(area,g1(g))) ;
-        N2 = sum(sum_area_recs(area,g2(g))) ;
-        n2 = sum(sum_mod_area_recs(area,g2(g))) ;
-
-        [tbl,chi2stat_distr(area,g),pval_distr(area,g)] = crosstab(...
-            [ones(1, N1), 2*ones(1, N2)], ...
-            [1*ones(1, n1), 2*ones(1, N1-n1), ...
-            1*ones(1, n2), 2*ones(1, N2-n2)]) ;
-    end
-end
 %% Figure 5 C & Supplementary Figure 4.1 Expert Single Units distrubtion per probe depth 
 
 close all
@@ -312,14 +238,15 @@ for g   = 1:numel(GNG_rec_all_cell)-2 % only for experts
     cdepth_all = reshape(GNG_analysis.clusterDepths_mod{1,g}(:,:,:),[],1) ;
      idx_cdepth_all = find(~isnan(cdepth_all)) ;
      cdepth_all = cdepth_all(idx_cdepth_all) ;
-     
+
+
      % plot them in a histogram 
      h =  histfit(cdepth_all,50) ;
      hold on 
      h(1).FaceColor = colors_ado_adu{g};
      h(2).Color = colors_ado_adu{g};
      h(1).EdgeColor = 'none' ;
-     h(1).FaceAlpha = 0.4 ;
+     h(1).FaceAlpha = 0.3 ;
      h(2).LineStyle = L{g} ;
      h(2).LineWidth = 5 ;
        
@@ -354,7 +281,7 @@ for g   = 1:numel(GNG_rec_all_cell)-2 % only for experts
        f =  figure(g+1) ;
        h =  histfit(cdepth_area,50) ;
        h(1).FaceColor = Colors_area{area};
-       h(1).FaceAlpha = 0.5 ;
+       h(1).FaceAlpha = 0.7 ;
        h(2).Color = Colors_area{area};
        h(1).EdgeColor = 'none' ;
        h(1).EdgeColor = 'none' ;
@@ -1195,8 +1122,6 @@ GNG_ephys_table_area = table(categorical({...
         'p-value'}) ;
 writetable(GNG_ephys_table_area,['GNG_ephys_table_area.xlsx'],'Sheet',area) %;
 end
-
-
 %% table of area comparison 
 
 for g = 1:numel(GNG_rec_all_cell)-2 % experts only
@@ -1245,6 +1170,156 @@ round(p_all_area(1,:)',4),  round(p_all_area(2,:)',4), round(p_all_area(3,:)',4)
         'AUDv - TEa',...
         }) ;
 writetable(GNG_ephys_table_group,['GNG_ephys_table_group.xlsx'],'Sheet',g)
+
+end
+%% for novice mice per region 
+% compare them statistically in experts
+for v = 1:size(variable_all,3)
+     size_n_adol_all= size(variable_area{1,1,v}(~isnan(variable_area{1,3,v})),1) ;
+        size_n_adult_all = size(variable_area{1,2,v}(~isnan(variable_area{1,4,v})),1) ;
+        if ~isempty(size_n_adol_all)
+            if ~isempty(size_n_adult_all)
+                % compare the distribution 
+                [p_all(v), h, stats] = ranksum(variable_all{1,3,v}, variable_all{1,4,v}, 'tail', 'both');
+
+                effect = meanEffectSize(variable_all{1,3,v},variable_all{1,4,v},Paired=false,Effect="robustcohen",Alpha=0.05) ;
+
+                CohenD_all(v) = effect.Effect ; 
+                CI_all(:,v) = effect.ConfidenceIntervals ;
+                % assign according to significancxe
+                if  p_all(v) < 0.0005
+                    p_txt{v} = '***';
+                elseif  p_all(v) < 0.005
+                    p_txt{v} = '**';
+                elseif  p_all(v) < 0.05
+                    p_txt{v} = '*';
+                elseif p_all(v)> 0.05
+                    p_txt{v} = 'n.s.';
+                end
+                
+            end
+        end
+
+
+        % same per area
+        for area = 1:length(areas)
+            size_n_adol_area = size(variable_area{1,3,v,area}(~isnan(variable_area{1,3,v,area})),1) ;
+            size_n_adult_area = size(variable_area{1,4,v,area}(~isnan(variable_area{1,4,v,area})),1) ;
+            if ~isempty(size_n_adol_area)
+                if ~isempty(size_n_adult_area)
+                    [p_area(v,area), h, stats] = ranksum(variable_area{1,3,v,area}, variable_area{1,4,v,area}, 'tail', 'both');
+                    
+          effect = meanEffectSize(variable_area{1,3,v,area},variable_area{1,4,v,area},Paired=false,Effect="robustcohen",Alpha=0.05) ;
+
+                CohenD_area(v,area) = effect.Effect ; 
+                CI_area(:,v,area) = effect.ConfidenceIntervals ;
+
+                    if  p_area(v,area) < 0.0005
+                        p_txt_area{v,area} = '***';
+                    elseif p_area(v,area) < 0.005
+                        p_txt_area{v,area} = '**';
+                    elseif  p_area(v,area) < 0.05
+                       p_txt_area{v,area} = '*';
+                    elseif p_area(v,area)> 0.05
+                        p_txt_area{v,area} = 'n.s.';
+                    end
+                    
+                end
+            end
+        end
+end
+clc
+toc
+
+
+
+
+
+for  area = 1:length(areas)
+    % squeeze to 2D for  the overall mean and stderr
+    for v = 1:size(variable_all,3)
+        mean_var_2d_area(v,:) = squeeze (mean_var_area(1,:,v,area))' ;
+        std_var_2d_area(v,:) = squeeze (stderr_var_area (1,:,v,area))' ;
+        CI_area_2d(v,:) = squeeze(CI_area(:,v,area)) ; 
+    end
+
+    mean_var_2d_area = round (mean_var_2d_area,4) ;
+    std_var_2d_area = round (std_var_2d_area,4) ;
+    CI_area_2d = round (CI_area_2d,4) ;
+CohenD_area = round (CohenD_area,4) ;
+
+GNG_ephys_table_area = table(categorical({...
+    'spontaneous FR';...
+    'evoked FR'; ...
+    'FR coeff. var';...
+    'latency to peak';...
+    'FWHM';...
+    'min. latency';...
+    '% trials resp.';...
+    'lifetime sparse.'}),...
+    mean_var_2d_area(:,1),mean_var_2d_area(:,2),...
+    std_var_2d_area(:,1),std_var_2d_area(:,2),...
+    CohenD_area(:,area), CI_area_2d(:,1), CI_area_2d(:,2), p_area(:,area)...
+    ,'VariableNames',{'neuronal property',...
+    'adol. mean',...
+    'adult mean',...
+    'adol. std',...
+    'adult std',...
+    'robust Cohen D',...
+        'lower CI',...
+        'upper CI',...
+        'p-value'}) ;
+writetable(GNG_ephys_table_area,['GNG_ephys_table_area_novice.xlsx'],'Sheet',area) %;
+end
+
+%% table of area comparison for NOVICE
+
+for g = 3:numel(GNG_rec_all_cell) % experts only
+    for v = 1:size(variable_all,3)
+        [~,~,stats] =  kruskalwallis([  squeeze(variable_area{1,g,v,1}),....
+            squeeze(variable_area{1,g,v,2}),squeeze(variable_area{1,g,v,3}), squeeze(variable_area{1,g,v,4})],[],'off') ;
+        stat_multi_all{g,v} = multcompare(stats,"Display","off");
+        Ad_mean(:,v) =  squeeze(mean_var_area(1,g,v,1)) ;
+        Ad_stderr(:,v) =  squeeze(stderr_var_area(1,g,v,1)) ;
+        Ap_mean(:,v) =  squeeze(mean_var_area(1,g,v,2)) ;
+        Ap_stderr(:,v) =  squeeze(stderr_var_area(1,g,v,2)) ;
+        Av_mean(:,v) =  squeeze(mean_var_area(1,g,v,3)) ;
+        Av_stderr(:,v) =  squeeze(stderr_var_area(1,g,v,3)) ;
+        TEa_mean(:,v) =  squeeze(mean_var_area(1,g,v,4)) ;
+        TEa_stderr(:,v) =  squeeze(stderr_var_area(1,g,v,4)) ;
+        p_all_area(:,v) = stat_multi_all{g,v}(:,6) ;
+ 
+    end
+
+GNG_ephys_table_group = table(categorical({...
+    'spontaneous FR';...
+    'evoked FR'; ...
+    'FR coeff. var';...
+    'latency to peak';...
+    'FWHM';...
+    'min. latency';...
+    '% trials resp.';...
+    'lifetime sparse.'}),...
+round(Ad_mean',4),  round(Ad_stderr',4), round(Ap_mean',4),  round(Ap_stderr',4),...
+round(Av_mean',4),  round(Av_stderr',4), round(TEa_mean',4),  round(TEa_stderr',4),...
+round(p_all_area(1,:)',4),  round(p_all_area(2,:)',4), round(p_all_area(3,:)',4), round(p_all_area(4,:)',4), round(p_all_area(5,:)',4), round(p_all_area(6,:)',4),...
+    'VariableNames',{'neuronal property',...
+        'Ad Mean',...
+        'Ad STE',...
+         'Ap Mean',...
+        'Ap STE',...
+         'Av Mean',...
+        'Av STE',...
+        'TEa Mean',...
+        'TEa STE',...
+        'AUDd - AUDp',...
+        'AUDd - AUDv',...
+        'AUDd - TEa',...
+        'AUDp - AUDv',...
+        'AUDp - TEa',...
+        'AUDv - TEa',...
+        }) ;
+writetable(GNG_ephys_table_group,['GNG_ephys_table_group_novice.xlsx'],'Sheet',g)
 
 end
 
@@ -1365,3 +1440,73 @@ FR_array = GNG_analysis.frArray_Smoothed_mod ; % only auditory neurons
 bin_array = GNG_analysis.binArray_mod ; % only auditory neurons 
 save("FR_array.mat","FR_array")
 save("bin_array.mat","bin_array")
+%% voltage trace figure 4a
+% MATLAB Script to Read .meta and .bin Files in Chunks
+clear all
+close all
+% Specify file names
+meta_file = 'Adult_6_A1_040422_g0_t0.imec0.ap.meta';
+bin_file = 'Adult_6_A1_040422_g0_t0.imec0.ap.bin';
+
+% Read .meta file
+meta_fid = fopen(meta_file, 'r');
+meta_data = textscan(meta_fid, '%s', 'Delimiter', '\n');
+fclose(meta_fid);
+meta_data = meta_data{1};
+
+% Extract necessary metadata
+sampling_rate = 30000; % Default sampling rate in Hz
+num_channels = 384; % Number of recording channels
+data_type = 'int16'; % Assuming 16-bit integer data
+
+% Calculate the number of samples per channel
+bytes_per_sample = 2; % For 'int16'
+file_info = dir(bin_file);
+total_samples = file_info.bytes / (num_channels * bytes_per_sample);
+
+% Specify the chunk size (in seconds)
+chunk_duration = 50 % 1 second chunk
+chunk_size = chunk_duration * sampling_rate;
+
+% Define start point (in samples) for reading
+start_sample = 300000;
+
+% Open the .bin file for reading
+bin_fid = fopen(bin_file, 'r');
+
+% Move file pointer to the desired start point
+fseek(bin_fid, (start_sample - 1) * num_channels * bytes_per_sample, 'bof');
+
+% Read chunk of data
+raw_data = fread(bin_fid, [num_channels, chunk_size], data_type);
+fclose(bin_fid);
+
+% Select a channel to plot
+channel_to_plot = 100:110
+for ch = 1:size(channel_to_plot,2)
+voltage_trace = raw_data(channel_to_plot(ch), :);
+
+% Generate time vector
+time_vector = (0:length(voltage_trace)-1) / sampling_rate;
+
+% Plot the voltage trace
+figure(1);
+subplot(size(channel_to_plot,2),1,ch)
+plot(time_vector, wdenoise(voltage_trace,10),'-k');
+box off
+
+yticks([])
+xticks([])
+ylabel([])
+xlabel([])
+% ylim([-200 200])
+% if ch == size(channel_to_plot,2) 
+%     yticks([-200 0 200])
+%     yticklabels([-200 0 200])
+% %xticks([1 2 3 4 5])
+% xlabel('Time (s)');
+% ylabel('Voltage (uV)'); 
+% %ylim([-200 200])
+
+%end
+end 
