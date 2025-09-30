@@ -152,9 +152,10 @@ for   g = 1:4
         plot( ind_AUC_shuf_all{e,g}(example(g),:),'Color',[0.5 0.5 0.5],...
             'linestyle',L{g},'linewidth',4)
         hold on
+        xlim([0 24])
         xline(6,'--','Color','k');
-        xticks([1 6 18 ])
-        xticklabels([ -200 0 400])
+        xticks([0 6 12 18 24])
+        xticklabels([ -200 0 200 400 600])
         ylim([0.45 1])
         yticks([ 0.5 0.75 1])
         xlabel('time (ms)')
@@ -211,7 +212,7 @@ for   g = 1:4
 
     rectangle( 'Position' , [0 (size_tr(1,1)+size_tr(1,2)+ size_tr(1,3)+1) 50 size_tr(1,4)],'Facecolor',color_mean{4},'EdgeColor','none')
     hold on
-
+    xlim([0 800])
     xticks([0:200:800])
     xticklabels([-200:200:600])
     ylim([0.5 sum(size_tr)])
@@ -269,27 +270,25 @@ for e = 1:length(a)
         figure(g)
         length_bins = size(  mean_vec{a(e),g},2) ;
         % subplot(2,2,g)
-        plot([1, 1:length_bins-1], mean_vec{a(e),g},'Color',color_eh{ac(e)},...
+        plot([1:length_bins], mean_vec{a(e),g},'Color',color_eh{ac(e)},...
             'linestyle',L{g},'linewidth',2);
         hold on
 
-        patch([[1,1:length_bins-1] flip([1,1:length_bins-1])] , [  mean_vec{a(e),g} + ....
+        patch([[1:length_bins] flip([1:length_bins])] , [  mean_vec{a(e),g} + ....
             stde_vec{a(e),g} flip(  mean_vec{a(e),g} -  stde_vec{a(e),g})], color_eh{ac(e)} ,...
             'facealpha' , 0.2, 'EdgeColor','none')
         hold on
 
-        plot([1, 1:length_bins-1],   mean_vec_shuf{a(e),g}+ ....
+        plot([ 1:length_bins],   mean_vec_shuf{a(e),g}+ ....
             std_vec_shuf{a(e),g},'Color',[0.5 0.5 0.5],...
             'linestyle',L{g},'linewidth',2);
         hold on
 
-
-        xline(6,'--','Color','k');
-        xticks([1 6  18])
-        xticklabels([-200 0  400])
-        xlim([1 (length_bins)])
+xlim([1 22])
+        xline(5.5,'--','Color','k');
+        xticks([1 11 22])
+        xticklabels([-200 200 600])
         yticks([0.5:0.05:0.6])
-
         ylim([0.48 0.6])
         xlabel('time (ms)')
         ylabel(' discrimination (AUC)')
@@ -733,4 +732,128 @@ fixedEffectsTable = table(fixedEffects.Estimate, fixedEffects.SE, fixedEffects.t
     'VariableNames', {'Estimate', 'StandardError', 'tStatistic', 'DF', 'pValue', 'CI lower', 'CI upper'});
 
 writetable(fixedEffectsTable,'LME_AUC_exp_novice.xlsx','Sheet',1)
-%%
+%% review 
+%% supplementary figure 53 plot 3d per area 
+clc
+close all
+Colors_area = {[.1 .3 .8], [.5 .4 .9], [0 .5 .6],[0.4940 0.1840 0.5560]};
+for g = 1:4
+    figure
+    for e = 1:2
+        idx_AUDd = (find(area_idx_th{e,g} == 1 )) ;
+        idx_AUDp = (find(area_idx_th{e,g} == 2 )) ;
+        idx_AUDv = (find(area_idx_th{e,g} == 3 )) ;
+        idx_TEa = (find(area_idx_th{e,g} == 4 )) ;
+
+        
+       size_area{g,e}(1,1) =  size(idx_AUDd,1) ;
+       size_area{g,e}(1,2) = size(idx_AUDp,1) ;
+       size_area{g,e}(1,3) = size(idx_AUDv,1) ;
+       size_area{g,e}(1,4) = size(idx_TEa,1) ;
+
+        subplot(1,2,e)
+        plot3(GNG_analysis.onset_latency_AUC{e,g}(idx_AUDd),GNG_analysis.width_AUC{e,g}(idx_AUDd),GNG_analysis.max_AUC{e,g}(idx_AUDd)...
+            ,'LineStyle','none','Marker','o','Color',Colors_area{1},'MarkerFaceColor',Colors_area{1})
+        hold on
+        plot3(GNG_analysis.onset_latency_AUC{e,g}(idx_AUDp),GNG_analysis.width_AUC{e,g}(idx_AUDp),GNG_analysis.max_AUC{e,g}(idx_AUDp)...
+            ,'LineStyle','none','Marker','o','Color',Colors_area{2},'MarkerFaceColor',Colors_area{2})
+        hold on
+        plot3(GNG_analysis.onset_latency_AUC{e,g}(idx_AUDv),GNG_analysis.width_AUC{e,g}(idx_AUDv),GNG_analysis.max_AUC{e,g}(idx_AUDv)...
+            ,'LineStyle','none','Marker','o','Color',Colors_area{3},'MarkerFaceColor',Colors_area{3})
+        hold on
+        plot3(GNG_analysis.onset_latency_AUC{e,g}(idx_TEa),GNG_analysis.width_AUC{e,g}(idx_TEa),GNG_analysis.max_AUC{e,g}(idx_TEa)...
+            ,'LineStyle','none','Marker','o','Color',Colors_area{4},'MarkerFaceColor',Colors_area{4})
+
+        grid on
+        xlabel('onset')
+        xlim([0 1000])
+        ylabel('width')
+        ylim([0 1000])
+        zlabel('max')
+        zlim([0.5 1])
+
+        
+    end
+end 
+
+%% test within group between areas
+
+areas = {'AUDd', 'AUDp', 'AUDv', 'TEa'};
+numAreas = length(areas);
+numGroups = 4;
+epochs = 1:2;
+
+measurements = {'onset_latency_AUC', 'width_AUC', 'max_AUC'};
+numMeasures = length(measurements);
+
+for e = epochs
+    fprintf('\n======= Epoch %d =======\n', e);
+
+    for g = 1:numGroups
+        fprintf('\nGroup %d - Within-Group Comparison (Friedman):\n', g);
+
+        for m = 1:numMeasures
+            areaData = cell(1, numAreas);
+            for a = 1:numAreas
+                idx = find(area_idx_th{e,1} == a);
+                areaData{a} = GNG_analysis.(measurements{m}){e, g}(idx);
+            end
+
+            % Ensure equal number of samples per brain area
+            minLen = min(cellfun(@length, areaData));
+            if minLen < 2
+                fprintf('  Not enough data for Group %d, Measurement %s, Epoch %d\n', g, measurements{m}, e);
+                continue
+            end
+
+            % Create subject-by-condition matrix
+            Y = zeros(minLen, numAreas);
+            for a = 1:numAreas
+                Y(:,a) = areaData{a}(1:minLen);
+            end
+
+            % Remove rows with NaNs
+            Y(any(isnan(Y), 2), :) = [];
+
+            if size(Y,1) < 2
+                fprintf('  Not enough complete data (after NaN removal) for Group %d, Measurement %s, Epoch %d\n', g, measurements{m}, e);
+                continue
+            end
+
+            % Friedman test
+            p = friedman(Y, 1, 'off');
+            fprintf('  %s: p = %.4f\n', measurements{m}, p);
+        end
+    end
+end
+
+% Assuming all collected p-values
+all_p = []; % empty at start
+
+% In loop where p-values are calculated:
+all_p(end+1) = p;
+
+% After all loops:
+corrected_p = min(all_p * length(all_p), 1);  % Bonferroni correction
+
+[p_sorted, sort_idx] = sort(all_p);
+m = length(all_p);
+q = 0.05; % false discovery rate
+
+thresholds = (1:m) * q / m;
+is_sig = p_sorted <= thresholds;
+
+% Convert back to original order
+fdr_significant = false(size(all_p));
+fdr_significant(sort_idx) = is_sig;
+
+
+fprintf('\n--- Multiple Comparison Correction ---\n');
+fprintf('Uncorrected p-values:\n');
+disp(all_p)
+
+fprintf('Bonferroni corrected:\n');
+disp(min(all_p * length(all_p), 1))
+
+fprintf('FDR significance flags:\n');
+disp(fdr_significant)
