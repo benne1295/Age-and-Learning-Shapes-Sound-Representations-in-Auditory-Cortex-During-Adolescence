@@ -111,7 +111,7 @@ GNG_analysis.r_AUC_shuf_abs =  r_AUC_shuf_abs ;
 %% mean of stimulus activity  of all trial samples
 clc
 per_mean = false ;
-a = [1 2] ;
+a = [1 2];
 stim_onset_bin = abs((window(1)* 1000)/ run_window) ;
 [ind_AUC, ind_AUC_shuf, ind_AUC_all,ind_AUC_shuf_all,std_ind_AUC_shuf_all, mean_vec, stde_vec,mean_vec_shuf, std_vec_shuf ]...
     = GNG_ind_mean_AUC (GNG_rec_all_cell_exp, GNG_analysis.r_AUC_abs, GNG_analysis.r_AUC_shuf_abs,...
@@ -180,7 +180,8 @@ end
 
 
          for e = 1:length(a)
-             subplot(1,3,e)
+             figure
+             %subplot(1,3,e)
              plot( GNG_analysis.ind_AUC_all{e,g}(c,:),'Color',color_eh{ac(e)},...
                  'linestyle',L{g},'linewidth',2);
              hold on
@@ -359,9 +360,9 @@ for e = 1:length(a)
         xline(200,'--','Color','k');
         xline(300,'--','Color','k');
 
-          xticks([0 6 12 18])
-             xticklabels([ -200:200:400])
-        xlim([1 18])
+          xticks([0 6 12 18 24])
+             xticklabels([ -200:200:600])
+        xlim([1 24])
         ylim([0.5 0.6])
         xlabel('time (ms)')
         ylabel(' Discrimination (abs. AUC)')
@@ -526,7 +527,7 @@ close all
 for g = 1:2
     for e = 1:3
         figure
-        subplot(1,2,e)
+        subplot(1,3,e)
         plot3(GNG_analysis.onset_latency_AUC{e,g},GNG_analysis.width_AUC{e,g},GNG_analysis.max_AUC{e,g}...
             ,'LineStyle','none','Marker','o','Color',color_eh{e},'MarkerFaceColor',color_eh{e})
         hold on
@@ -558,6 +559,11 @@ saveas(recent_figure, filepath, 'svg');
 filepath = fullfile(directory, filename);
 recent_figure = figure(3);
 saveas(recent_figure, filepath, 'svg');
+
+{e,g}
+size(GNG_analysis.onset_latency_AUC{1,2}(~isnan(GNG_analysis.onset_latency_AUC{1,2})))
+
+size(GNG_analysis.onset_latency_AUC{1,2}(~isnan(GNG_analysis.onset_latency_AUC{1,2})))
 
 %% supplementary figure 53 plot 3d per area 
 close all
@@ -600,3 +606,86 @@ saveas(recent_figure, filepath, 'svg');
 filepath = fullfile(directory, filename);
 recent_figure = figure(2);
 saveas(recent_figure, filepath, 'svg');
+%% review
+
+%% test within group between areas
+
+areas = {'AUDd', 'AUDp', 'AUDv', 'TEa'};
+numAreas = length(areas);
+numGroups = 2;
+epochs = 1:3;
+
+measurements = {'onset_latency_AUC', 'width_AUC', 'max_AUC'};
+numMeasures = length(measurements);
+
+for e = epochs
+    fprintf('\n======= Epoch %d =======\n', e);
+
+    for g = 1:numGroups
+        fprintf('\nGroup %d - Within-Group Comparison (Friedman):\n', g);
+
+        for m = 1:numMeasures
+            areaData = cell(1, numAreas);
+            for a = 1:numAreas
+                idx = find(area_idx_th{e,1} == a);
+                areaData{a} = GNG_analysis.(measurements{m}){e, g}(idx);
+            end
+
+            % Ensure equal number of samples per brain area
+            minLen = min(cellfun(@length, areaData));
+            if minLen < 2
+                fprintf('  Not enough data for Group %d, Measurement %s, Epoch %d\n', g, measurements{m}, e);
+                continue
+            end
+
+            % Create subject-by-condition matrix
+            Y = zeros(minLen, numAreas);
+            for a = 1:numAreas
+                Y(:,a) = areaData{a}(1:minLen);
+            end
+
+            % Remove rows with NaNs
+            Y(any(isnan(Y), 2), :) = [];
+
+            if size(Y,1) < 2
+                fprintf('  Not enough complete data (after NaN removal) for Group %d, Measurement %s, Epoch %d\n', g, measurements{m}, e);
+                continue
+            end
+
+            % Friedman test
+            p = friedman(Y, 1, 'off');
+            fprintf('  %s: p = %.4f\n', measurements{m}, p);
+        end
+    end
+end
+
+% Assuming all collected p-values
+all_p = []; % empty at start
+
+% In loop where p-values are calculated:
+all_p(end+1) = p;
+
+% After all loops:
+corrected_p = min(all_p * length(all_p), 1);  % Bonferroni correction
+
+[p_sorted, sort_idx] = sort(all_p);
+m = length(all_p);
+q = 0.05; % false discovery rate
+
+thresholds = (1:m) * q / m;
+is_sig = p_sorted <= thresholds;
+
+% Convert back to original order
+fdr_significant = false(size(all_p));
+fdr_significant(sort_idx) = is_sig;
+
+
+fprintf('\n--- Multiple Comparison Correction ---\n');
+fprintf('Uncorrected p-values:\n');
+disp(all_p)
+
+fprintf('Bonferroni corrected:\n');
+disp(min(all_p * length(all_p), 1))
+
+fprintf('FDR significance flags:\n');
+disp(fdr_significant)
